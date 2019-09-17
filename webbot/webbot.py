@@ -17,7 +17,7 @@ class Browser:
 
     **Constructor**
 
-    :__init__(showWindow = True):
+    :__init__(showWindow = False):
         The constructor takes showWindow flag as argument which Defaults to False. If it is set to true , all browser happen without showing up any GUI window .
 
 
@@ -31,20 +31,17 @@ class Browser:
     
     '''
 
-    def __init__(self , showWindow = True ):
+    def __init__(self , showWindow = True, extra_opts=()):
         options = webdriver.ChromeOptions()
-        options.add_argument("--disable-dev-shm-usage") ;
-        options.add_argument("--no-sandbox") ;
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--no-sandbox")
+        list(map(options.add_argument, extra_opts))
 
         if(not showWindow):
             options.set_headless(headless=True) ; 
 
-        if sys.platform == 'linux' or sys.platform == 'linux2':
-            driverfilename = 'chrome_linux'
-        elif sys.platform == 'win32':
-            driverfilename = 'chrome_windows.exe'
-        elif sys.platform == 'darwin':
-            driverfilename = 'chrome_mac'
+        driverfilename = "chrome_linux" if  os.name=='posix' else "chrome_windows.exe" if os.name=='nt' else "chrome_mac" ; 
+#        driverfilename = "chrome_linux"
         driverpath =  os.path.join(os.path.split(__file__)[0] , 'drivers{0}{1}'.format(os.path.sep , driverfilename))
 
         os.chmod(driverpath , 0o755 ) 
