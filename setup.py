@@ -2,20 +2,14 @@ from setuptools import setup
 
 
 
-VERSION="0.34"
+VERSION="0.4"
 
-
-with open('README.rst', 'r', encoding='utf-8') as f:
-    long_description = f.read()
 
 setup(
     name='webbot',
-
-
     packages = ['webbot','webbot.drivers'] ,
     version = VERSION , 
-    long_description = long_description , 
-    install_requires = ['selenium'] , 
+    install_requires = ['selenium', 'undetected-chromedriver'] , 
     package_data = {'' : [r'drivers/*']},
     description = 'Web Browser automation and testing library for python with more features and simpler api than selenium' ,
     author = 'Natesh M Bhat' ,
@@ -31,11 +25,9 @@ setup(
           'Operating System :: MacOS :: MacOS X',
           'Operating System :: Microsoft :: Windows',
           'Operating System :: POSIX',
-          'License :: OSI Approved :: MIT License' , 
-          'Programming Language :: Python :: 3',
-          'Programming Language :: Python :: 3.5',
-          'Programming Language :: Python :: 3.6',
-          'Programming Language :: Python :: 3.7'
+          'License :: OSI Approved :: MIT License', 
+          'Programming Language :: Python :: 3.10',
+          'Programming Language :: Python :: 3.11'
           ] 
 
 )
