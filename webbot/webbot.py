@@ -4,11 +4,13 @@ import string
 import errno
 import sys
 from collections import OrderedDict
-
+from typing import List
+import undetected_chromedriver as uc
 from selenium import webdriver
 from selenium.common import exceptions
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
 
 
 # TODO : ADD AN ASSERT TEXT OR ELEMENT FUNCTION
@@ -24,9 +26,9 @@ class Browser:
         The constructor takes showWindow flag as argument which Defaults to False. If it is set to true , all browser happen without showing up any GUI window .
 
         :Args:
-            - showWindow : If false , will run a headless browser without showing GUI window.
+            - showWindow : If true , will run a headless browser without showing GUI window.
             - proxy : Url of any optional proxy server.
-            - driverPath: can specify the path of an alternative chromedriver
+            - argArray : Array of argument options to be appended to the selenium driver
 
 
 
@@ -38,46 +40,39 @@ class Browser:
         - List containing all the errors which might have occurred during performing an action like click ,type etc.
     """
 
-    def __init__(self, showWindow=True, proxy=None , downloadPath:str=None, driverPath:str=None, arguments=["--disable-dev-shm-usage","--no-sandbox"]):
-        options = webdriver.ChromeOptions()
-
-        for argument in arguments:
-            options.add_argument(argument)
-
-        if downloadPath is not None and isinstance(downloadPath,str):
-            absolutePath = os.path.abspath(downloadPath)
-            if(not os.path.isdir(absolutePath)):
+    def __init__(self, show_window=True, proxy=None, download_path: str = None, arg_array: List[str] = [],
+                 options=None):
+        options = webdriver.ChromeOptions() if options is None else options
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--no-sandbox")
+        if download_path is not None and isinstance(download_path, str):
+            absolutePath = os.path.abspath(download_path)
+            if not os.path.isdir(absolutePath):
                 raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), absolutePath)
-                
-            options.add_experimental_option('prefs', {'download.default_directory' : absolutePath})
-            
-        if driverPath is not None and isinstance(driverPath,str):
-            driverPath = os.path.abspath(driverPath)
-            if(not os.path.isdir(driverPath)):
-                raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), driverPath)
+
+            options.add_experimental_option('prefs', {'download.default_directory': absolutePath})
 
         if proxy is not None and isinstance(proxy, str):
-            # Check if '--proxy-server' has not yet been set
-            if not any(arg.starts_with("--proxy-server") for arg in arguments):
-                options.add_argument("--proxy-server={}".format(proxy))
+            options.add_argument("--proxy-server={}".format(proxy))
 
-        if not showWindow and '--headless' not in arguments:
+        if not show_window:
             options.headless = True
-            options.add_argument("--headless")
 
-        if driverPath is None:
-            driverfilename = ''
-            if sys.platform == 'linux' or sys.platform == 'linux2':
-                driverfilename = 'chrome_linux'
-            elif sys.platform == 'win32':
-                driverfilename = 'chrome_windows.exe'
-            elif sys.platform == 'darwin':
-                driverfilename = 'chrome_mac'
-            driverPath = os.path.join(os.path.split(__file__)[0], 'drivers{0}{1}'.format(os.path.sep, driverfilename))
+        driverfilename = ''
+        if sys.platform == 'linux' or sys.platform == 'linux2':
+            driverfilename = 'chrome_linux'
+        elif sys.platform == 'win32':
+            driverfilename = 'chrome_windows.exe'
+        elif sys.platform == 'darwin':
+            driverfilename = 'chrome_mac'
+        driverpath = os.path.join(os.path.split(__file__)[0], 'drivers{0}{1}'.format(os.path.sep, driverfilename))
 
-            os.chmod(driverPath, 0o755)
+        os.chmod(driverpath, 0o755)
 
-        self.driver = webdriver.Chrome(executable_path=driverPath, options=options)
+        for arg in arg_array:
+            options.add_argument(arg)
+
+        self.driver = uc.Chrome(options=options, suppress_welcome=True)
         self.Key = Keys
         self.errors = []
 
@@ -87,7 +82,7 @@ class Browser:
           'get_screenshot_as_base64', 'get_screenshot_as_file', 'get_screenshot_as_png', 'get_window_position',
           'get_window_rect', 'get_window_size', 'maximize_window', 'minimize_window', 'implicitly_wait', 'quit',
           'refresh', 'save_screenshot', 'set_network_conditions', 'set_page_load_timeout', 'set_script_timeout',
-          'set_window_position', 'set_window_rect', 'start_client', 'start_session', 'stop_client', 'switch_to_alert']]
+          'set_window_position', 'set_window_rect', 'start_client', 'start_session', 'stop_client', 'switch_to']]
 
     def close_current_tab(self):
         """Closes the current tab which the driver is controlling"""
@@ -211,7 +206,7 @@ class Browser:
                     self.element_to_score_id_set.add(element.id)
 
         def element_fetch_helper(xpath, score):
-            add_to_init_text_matches_score(self.driver.find_elements_by_xpath(xpath), score)
+            add_to_init_text_matches_score(self.driver.find_elements(By.XPATH, xpath), score)
 
         def find_input_element_for_label(elementlist, score):
             """This method finds the input tag elements by taking in the label elements and assigns the score
@@ -225,15 +220,16 @@ class Browser:
                 try:
                     element_fetch_helper(("//body//input[@id='{}']".format(possible_input_id)), score)
 
-                    add_to_init_text_matches_score(element.find_elements_by_xpath(
-                        "../input[contains(translate(@id , '{}' ,'{}' ) , '{}')]".format(text.upper(), text.lower(),
-                                                                                         text.lower())), score - 5)
+                    add_to_init_text_matches_score(element.find_elements(By.XPATH,
+                                                                         "../input[contains(translate(@id , '{}' ,'{}' ) , '{}')]".format(
+                                                                             text.upper(), text.lower(),
+                                                                             text.lower())), score - 5)
 
-                    add_to_init_text_matches_score(element.find_elements_by_xpath("/./preceding::input"), score - 7)
+                    add_to_init_text_matches_score(element.find_elements(By.XPATH, "/./preceding::input"), score - 7)
 
                     element_fetch_helper(("//body//input[@name='{}']".format(possible_input_id)), score - 6)
 
-                    add_to_init_text_matches_score(element.find_elements_by_xpath("../input"), score - 10)
+                    add_to_init_text_matches_score(element.find_elements(By.XPATH, "../input"), score - 10)
 
                 except exceptions.NoSuchElementException as E:
                     self.__set_error(E, element)
@@ -247,17 +243,18 @@ class Browser:
                         test_attr, text.upper(), text.lower(), text.lower())), score=33)
 
                 find_input_element_for_label(
-                    self.driver.find_elements_by_xpath("//body//label[text()='{}']".format(text)), score=45)
+                    self.driver.find_elements(By.XPATH, "//body//label[text()='{}']".format(text)), score=45)
 
                 find_input_element_for_label(
-                    self.driver.find_elements_by_xpath("//body//label[contains( text() , '{}')]".format(text)),
+                    self.driver.find_elements(By.XPATH, "//body//label[contains( text() , '{}')]".format(text)),
                     score=37)
 
-                find_input_element_for_label(self.driver.find_elements_by_xpath(
-                    "//body//label[contains(translate( text() , '{}' , '{}' ) , '{}')]".format(text.upper(),
-                                                                                               text.lower(),
-                                                                                               text.lower())),
-                    score=33)
+                find_input_element_for_label(self.driver.find_elements(By.XPATH,
+                                                                       "//body//label[contains(translate( text() , '{}' , '{}' ) , '{}')]".format(
+                                                                           text.upper(),
+                                                                           text.lower(),
+                                                                           text.lower())),
+                                             score=33)
             else:
                 element_fetch_helper("//body//{}".format(tag), score=40)
 
@@ -266,7 +263,7 @@ class Browser:
                 element_fetch_helper(("//body//{}[text()='{}']".format(tagvar, text)), score=45)
                 element_fetch_helper(("//body//{}//*[text()='{}']".format(tagvar, text)), score=45)
 
-                add_to_init_text_matches_score(self.driver.find_elements_by_link_text("{}".format(text)), score=43)
+                add_to_init_text_matches_score(self.driver.find_elements(By.LINK_TEXT, "{}".format(text)), score=43)
 
                 element_fetch_helper(("//body//{}[contains(text() , '{}')]".format(tagvar, text)), score=37)
                 element_fetch_helper(("//body//{}//*[contains(text() , '{}')]".format(tagvar, text)), score=37)
@@ -297,10 +294,10 @@ class Browser:
                     text.upper(), text.lower(), text.lower())), score=25)
 
         if css_selector:
-            add_to_init_text_matches_score(self.driver.find_elements_by_css_selector(css_selector), 80)
+            add_to_init_text_matches_score(self.driver.find_elements(By.CSS_SELECTOR, css_selector), 80)
 
         if xpath:
-            add_to_init_text_matches_score(self.driver.find_elements_by_xpath(xpath), 100)
+            add_to_init_text_matches_score(self.driver.find_elements(By.CSS_SELECTOR, xpath), 100)
 
         if not text and tag:
             element_fetch_helper(("//body//{}".format(tag)), score=50)
@@ -335,9 +332,9 @@ class Browser:
                 handle_button_or_link_tag('a')
 
         if id:
-            add_to_init_text_matches_score(self.driver.find_elements_by_id(id), 100)
+            add_to_init_text_matches_score(self.driver.find_elements(By.ID, id), 100)
         if classname:
-            add_to_init_text_matches_score(self.driver.find_elements_by_class_name(classname), 50)
+            add_to_init_text_matches_score(self.driver.find_elements(By.CLASS_NAME, classname), 50)
 
         if not len(self.element_to_score.keys()) and loose_match:
             handle_loose_check()
@@ -526,7 +523,6 @@ class Browser:
         self.driver.execute_script("window.scrollBy( {}, 0 );".format(amount))
 
     def press(self, key):
-
         """Press any special key or a key combination involving Ctrl , Alt , Shift
 
         :Args:
