@@ -45,6 +45,9 @@ class Browser:
         options = webdriver.ChromeOptions() if options is None else options
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--no-sandbox")
+        options.add_argument("--incognito")
+        options.add_argument("--enable-features=NetworkService,NetworkServiceInProcess")
+
         if download_path is not None and isinstance(download_path, str):
             absolutePath = os.path.abspath(download_path)
             if not os.path.isdir(absolutePath):
@@ -197,7 +200,7 @@ class Browser:
                     continue
 
                 if element.id in self.element_to_score_id_set:
-                    '''No need to call the max method if the method call is ordered from most specific to least 
+                    '''No need to call the max method if the method call is ordered from most specific to least
                     specific which naturally has the max score if the element is already present '''
                     self.element_to_score[element] = max(self.element_to_score[element], score)
 
@@ -297,7 +300,7 @@ class Browser:
             add_to_init_text_matches_score(self.driver.find_elements(By.CSS_SELECTOR, css_selector), 80)
 
         if xpath:
-            add_to_init_text_matches_score(self.driver.find_elements(By.CSS_SELECTOR, xpath), 100)
+            add_to_init_text_matches_score(self.driver.find_elements(By.XPATH, xpath), 100)
 
         if not text and tag:
             element_fetch_helper(("//body//{}".format(tag)), score=50)
@@ -317,7 +320,7 @@ class Browser:
         if text.lower() in ['username', 'email', 'login'] and tag == 'input':
             element_fetch_helper(
                 '''//body//input[contains(translate(@name , 'USERNAME' , 'username' )  , 'username') or contains(
-                translate(@name ,'EMAIL' , 'email' ) , 'email') or contains(translate(@name , 'LOGIN' , 'login'  ) , 
+                translate(@name ,'EMAIL' , 'email' ) , 'email') or contains(translate(@name , 'LOGIN' , 'login'  ) ,
                 'login' ) or contains(translate(@type , 'EMAIL' , 'email') , 'email')] ''', 53)
 
         if tag == 'input':
